@@ -46,8 +46,12 @@ export default function OfficerDashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">My Assigned Complaints</h1>
-        <p className="text-slate-500">Manage complaints assigned to you</p>
+        <h1 className="text-2xl font-bold text-slate-800">
+          {user?.role === 'zonal_officer' ? 'My Zone Complaints' : user?.role === 'district_officer' ? 'All District Complaints' : 'My Area Complaints'}
+        </h1>
+        <p className="text-slate-500">
+          {user?.role === 'zonal_officer' ? `Zone: ${user?.assigned_zone || 'N/A'}` : user?.role === 'district_officer' ? 'Manage all complaints in the district' : 'Manage complaints assigned to you'}
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -141,6 +145,15 @@ export default function OfficerDashboard() {
                     <StatusBadge status={complaint.status} />
                   </div>
                   <h3 className="font-semibold text-slate-800">{complaint.title}</h3>
+                  {complaint.district && (
+                    <span className="text-xs text-trust-blue mr-2">{complaint.district}</span>
+                  )}
+                  {complaint.zone && (
+                    <span className="text-xs text-slate-400 mr-2">Zone: {complaint.zone}</span>
+                  )}
+                  {complaint.ward_number && (
+                    <span className="text-xs text-slate-400">Ward #{complaint.ward_number}</span>
+                  )}
                   <p className="text-sm text-slate-600 mt-1 line-clamp-2">{complaint.description}</p>
                   <p className="text-xs text-slate-400 mt-2">
                     Created: {new Date(complaint.created_at).toLocaleDateString()}

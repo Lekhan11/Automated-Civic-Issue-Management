@@ -45,4 +45,6 @@ class OfficerCreateRequest(BaseModel):
     name: str
     password: str
     phone: Optional[str] = None
-    assigned_area: Optional[dict] = None
+    role: str = "local_officer"
+    assigned_area_id: Optional[str] = None
+    assigned_zone: Optional[str] = None

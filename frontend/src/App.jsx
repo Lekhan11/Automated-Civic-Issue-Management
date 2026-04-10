@@ -5,7 +5,7 @@ import Register from './pages/Register'
 import UserDashboard from './pages/UserDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import OfficerDashboard from './pages/OfficerDashboard'
-import SuperAdminDashboard from './pages/SuperAdminDashboard'
+import DistrictOfficerDashboard from './pages/DistrictOfficerDashboard'
 import ComplaintForm from './pages/ComplaintForm'
 import ComplaintDetail from './pages/ComplaintDetail'
 import Layout from './components/Layout'
@@ -35,14 +35,18 @@ function RoleBasedRedirect() {
   if (!user) return <Navigate to="/login" />
 
   switch (user.role) {
-    case 'super_admin':
-      return <Navigate to="/super-admin" />
+    case 'district_officer':
+      return <Navigate to="/district-officer" />
+    case 'zonal_officer':
+      return <Navigate to="/officer" />
     case 'local_officer':
       return <Navigate to="/officer" />
     default:
       return <Navigate to="/dashboard" />
   }
 }
+
+const OFFICER_ROLES = ['local_officer', 'zonal_officer', 'district_officer']
 
 function AppRoutes() {
   const { user } = useAuth()
@@ -53,7 +57,6 @@ function AppRoutes() {
       <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
 
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        {/* Role-based redirect */}
         <Route index element={<RoleBasedRedirect />} />
 
         {/* User routes */}
@@ -61,32 +64,32 @@ function AppRoutes() {
         <Route path="complaints/new" element={<ProtectedRoute><ComplaintForm /></ProtectedRoute>} />
         <Route path="complaints/:id" element={<ProtectedRoute><ComplaintDetail /></ProtectedRoute>} />
 
-        {/* Officer routes */}
+        {/* Officer routes (local + zonal) */}
         <Route
           path="officer"
           element={
-            <ProtectedRoute allowedRoles={['local_officer', 'super_admin']}>
+            <ProtectedRoute allowedRoles={['local_officer', 'zonal_officer', 'district_officer']}>
               <OfficerDashboard />
             </ProtectedRoute>
           }
         />
 
-        {/* Admin dashboard (complaints overview) */}
+        {/* Admin dashboard — district_officer only */}
         <Route
           path="admin"
           element={
-            <ProtectedRoute allowedRoles={['local_officer', 'super_admin']}>
+            <ProtectedRoute allowedRoles={['district_officer']}>
               <AdminDashboard />
             </ProtectedRoute>
           }
         />
 
-        {/* Super Admin routes */}
+        {/* District Officer routes */}
         <Route
-          path="super-admin"
+          path="district-officer"
           element={
-            <ProtectedRoute allowedRoles={['super_admin']}>
-              <SuperAdminDashboard />
+            <ProtectedRoute allowedRoles={['district_officer']}>
+              <DistrictOfficerDashboard />
             </ProtectedRoute>
           }
         />

@@ -42,3 +42,18 @@ export const assignComplaint = (complaintId, officerId) =>
   api.put(`/api/admin/complaints/${complaintId}/assign?officer_id=${officerId}`)
 
 export const getOfficers = () => api.get('/api/admin/officers')
+
+// Area management
+export const getAreas = (params) => {
+  const query = new URLSearchParams(params).toString()
+  return api.get(`/api/admin/areas?${query}`)
+}
+
+export const createArea = (data) => api.post('/api/admin/areas', data)
+
+export const getZones = (district) => {
+  const params = district ? `?district=${district}` : ''
+  return api.get(`/api/admin/areas/zones${params}`)
+}
+
+export const getDistricts = () => api.get('/api/admin/areas/districts')

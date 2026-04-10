@@ -149,6 +149,8 @@ export default function AdminDashboard() {
                 <tr className="text-left text-sm text-slate-500 border-b border-slate-200">
                   <th className="pb-2">Ticket</th>
                   <th className="pb-2">Title</th>
+                  <th className="pb-2">District</th>
+                  <th className="pb-2">Zone</th>
                   <th className="pb-2">Status</th>
                   <th className="pb-2">Assigned</th>
                   <th className="pb-2">Action</th>
@@ -163,6 +165,8 @@ export default function AdminDashboard() {
                         {c.title.substring(0, 25)}...
                       </Link>
                     </td>
+                    <td className="py-3 text-xs text-slate-500">{c.district || '-'}</td>
+                    <td className="py-3 text-xs text-slate-500">{c.zone || '-'}</td>
                     <td className="py-3"><StatusBadge status={c.status} /></td>
                     <td className="py-3 text-sm text-slate-600">{c.assigned_to_name || 'Unassigned'}</td>
                     <td className="py-3">

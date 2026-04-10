@@ -20,7 +20,7 @@ async def get_all_complaints(
     status: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     escalated_only: bool = False,
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     # Convert string to enum, treating empty strings as None
@@ -63,7 +63,7 @@ async def get_all_complaints(
 
 @router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     stats = await complaint_service.get_dashboard_stats(db)
@@ -72,7 +72,7 @@ async def get_dashboard_stats(
 
 @router.get("/stats/categories", response_model=list[CategoryStats])
 async def get_category_stats(
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     stats = await complaint_service.get_category_stats(db)
@@ -83,7 +83,7 @@ async def get_category_stats(
 async def assign_complaint(
     complaint_id: str,
     officer_id: str,
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     complaint = await complaint_service.get_complaint_by_id(db, complaint_id)
@@ -103,7 +103,7 @@ async def update_complaint_status(
     complaint_id: str,
     status: ComplaintStatus,
     resolution_notes: Optional[str] = None,
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     complaint = await complaint_service.get_complaint_by_id(db, complaint_id)
@@ -122,7 +122,7 @@ async def update_complaint_status(
 async def get_all_users(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    current_user=Depends(require_role(UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     result = await user_service.get_all_users(db, page, limit)
@@ -143,7 +143,7 @@ async def get_all_users(
 
 @router.get("/officers")
 async def get_officers(
-    current_user=Depends(require_role(UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     officers = await user_service.get_all_officers(db)
@@ -153,6 +153,8 @@ async def get_officers(
             "name": o["name"],
             "email": o["email"],
             "role": o["role"],
+            "assigned_area_id": o.get("assigned_area_id"),
+            "assigned_zone": o.get("assigned_zone"),
         }
         for o in officers
     ]
@@ -161,12 +163,17 @@ async def get_officers(
 @router.post("/officers", status_code=201)
 async def create_officer(
     request: OfficerCreateRequest,
-    current_user=Depends(require_role(UserRole.SUPER_ADMIN)),
+    current_user=Depends(require_role(UserRole.DISTRICT_OFFICER)),
     db=Depends(get_db),
 ):
     from app.models.user import UserRole
     data = request.model_dump()
-    data["role"] = UserRole.LOCAL_OFFICER
+    valid_roles = [UserRole.LOCAL_OFFICER, UserRole.ZONAL_OFFICER, UserRole.DISTRICT_OFFICER]
+    requested_role = data.get("role", "local_officer")
+    if requested_role not in [r.value for r in valid_roles]:
+        data["role"] = UserRole.LOCAL_OFFICER
+    else:
+        data["role"] = UserRole(requested_role)
     try:
         user = await user_service.create_user(db, data)
         return {

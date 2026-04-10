@@ -7,7 +7,8 @@ from enum import Enum
 class UserRole(str, Enum):
     USER = "user"
     LOCAL_OFFICER = "local_officer"
-    SUPER_ADMIN = "super_admin"
+    ZONAL_OFFICER = "zonal_officer"
+    DISTRICT_OFFICER = "district_officer"
 
 
 class UserBase(BaseModel):
@@ -29,7 +30,8 @@ class UserInDB(UserBase):
     id: str = Field(alias="_id")
     hashed_password: str
     role: UserRole = UserRole.USER
-    assigned_area: Optional[dict] = None  # GeoJSON area for officers
+    assigned_area_id: Optional[str] = None  # Reference to areas collection
+    assigned_zone: Optional[str] = None  # For zonal_officer: zone name
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

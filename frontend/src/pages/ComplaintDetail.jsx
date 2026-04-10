@@ -9,6 +9,7 @@ import {
   UserIcon,
   ClipboardDocumentListIcon,
   CheckCircleIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 
@@ -122,8 +123,30 @@ export default function ComplaintDetail() {
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
-              This complaint has been escalated to higher authority.
-              {complaint.escalated_at && <span>Escalated on: {formatDate(complaint.escalated_at)}</span>}
+              Escalated to Level {complaint.escalation_level || 1}.
+              {complaint.escalated_at && <span> Escalated on: {formatDate(complaint.escalated_at)}</span>}
+            </div>
+          )}
+
+          {/* Area Info */}
+          {(complaint.zone || complaint.ward_number || complaint.district) && (
+            <div className="mt-4 flex items-center gap-4 text-sm text-slate-500">
+              {complaint.district && (
+                <span className="px-2 py-0.5 bg-trust-blue/10 text-trust-blue rounded-full font-medium">
+                  {complaint.district}
+                </span>
+              )}
+              {complaint.zone && (
+                <span className="px-2 py-0.5 bg-slate-100 rounded-full">
+                  Zone: {complaint.zone}
+                </span>
+              )}
+              {complaint.ward_number && (
+                <span className="flex items-center gap-1.5">
+                  <MapIcon className="h-4 w-4" />
+                  Ward #{complaint.ward_number}
+                </span>
+              )}
             </div>
           )}
         </div>

@@ -18,7 +18,7 @@ export default function Login() {
 
     try {
       const user = await login(email, password)
-      if (user.role === 'local_officer' || user.role === 'super_admin') {
+      if (user.role === 'local_officer' || user.role === 'zonal_officer' || user.role === 'district_officer') {
         navigate('/admin')
       } else {
         navigate('/')

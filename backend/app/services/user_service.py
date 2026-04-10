@@ -16,7 +16,8 @@ async def create_user(db, user_data: dict) -> dict:
         "hashed_password": get_password_hash(user_data["password"]),
         "role": user_data.get("role", UserRole.USER),
         "is_active": True,
-        "assigned_area": user_data.get("assigned_area"),
+        "assigned_area_id": user_data.get("assigned_area_id"),
+        "assigned_zone": user_data.get("assigned_zone"),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -39,10 +40,26 @@ async def get_user_by_id(db, user_id: str):
 
 async def get_all_officers(db):
     cursor = db.users.find(
-        {"role": {"$in": [UserRole.LOCAL_OFFICER, UserRole.SUPER_ADMIN]}}
+        {"role": {"$in": [UserRole.LOCAL_OFFICER, UserRole.ZONAL_OFFICER, UserRole.DISTRICT_OFFICER]}}
     )
-    officers = await cursor.to_list(length=100)
+    officers = await cursor.to_list(length=200)
     return officers
+
+
+async def get_officers_by_area(db, area_id: str, role: UserRole = None) -> list:
+    query = {"assigned_area_id": area_id, "is_active": True}
+    if role:
+        query["role"] = role
+    cursor = db.users.find(query)
+    return await cursor.to_list(length=50)
+
+
+async def get_officers_by_zone(db, zone: str, role: UserRole = None) -> list:
+    query = {"assigned_zone": zone, "is_active": True}
+    if role:
+        query["role"] = role
+    cursor = db.users.find(query)
+    return await cursor.to_list(length=50)
 
 
 async def update_user(db, user_id: str, update_data: dict):

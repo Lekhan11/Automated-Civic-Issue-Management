@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import connect_to_mongo, close_mongo_connection
-from app.api import auth, complaints, admin
+from app.api import auth, complaints, admin, areas
 
 app = FastAPI(
     title="Complaint Management System",
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(complaints.router)
 app.include_router(admin.router)
+app.include_router(areas.router)
 
 
 @app.on_event("startup")

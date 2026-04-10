@@ -65,6 +65,12 @@ class ComplaintInDB(ComplaintBase):
     escalated: bool = False
     escalated_to: Optional[str] = None
     escalation_level: int = 0
+    area_id: Optional[str] = None
+    ward_number: Optional[int] = None
+    zone: Optional[str] = None
+    district: Optional[str] = None
+    geocoded_area_name: Optional[str] = None
+    assigned_at: Optional[datetime] = None
     resolution_notes: Optional[str] = None
     resolution_images: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)

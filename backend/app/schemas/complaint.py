@@ -44,6 +44,11 @@ class ComplaintResponse(BaseModel):
     assigned_to_name: Optional[str] = None
     escalated: bool
     escalation_level: int
+    area_id: Optional[str] = None
+    ward_number: Optional[int] = None
+    zone: Optional[str] = None
+    district: Optional[str] = None
+    assigned_at: Optional[datetime] = None
     resolution_notes: Optional[str] = None
     resolution_images: List[str] = []
     created_at: datetime

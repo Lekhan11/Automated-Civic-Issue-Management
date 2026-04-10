@@ -9,6 +9,7 @@ import {
   ChartBarIcon,
   ShieldCheckIcon,
   UserGroupIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline'
 
 export default function Layout() {
@@ -17,18 +18,32 @@ export default function Layout() {
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
-  const isAdmin = user?.role === 'local_officer' || user?.role === 'super_admin'
-  const isSuperAdmin = user?.role === 'super_admin'
+  const isOfficer = ['local_officer', 'zonal_officer', 'district_officer'].includes(user?.role)
+  const isDistrictOfficer = user?.role === 'district_officer'
+  const isZonalOfficer = user?.role === 'zonal_officer'
 
-  // Get dashboard link based on role
   const getDashboardLink = () => {
     switch (user?.role) {
-      case 'super_admin':
-        return '/super-admin'
+      case 'district_officer':
+        return '/district-officer'
       case 'local_officer':
+      case 'zonal_officer':
         return '/officer'
       default:
         return '/dashboard'
+    }
+  }
+
+  const getRoleBadgeColor = () => {
+    switch (user?.role) {
+      case 'district_officer':
+        return 'bg-alert-red/10 text-alert-red'
+      case 'zonal_officer':
+        return 'bg-caution-orange/10 text-caution-orange'
+      case 'local_officer':
+        return 'bg-engagement-blue/10 text-engagement-blue'
+      default:
+        return 'bg-slate-100 text-slate-600'
     }
   }
 
@@ -48,98 +63,55 @@ export default function Layout() {
                 {/* User nav */}
                 {user?.role === 'user' && (
                   <>
-                    <Link
-                      to="/dashboard"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/dashboard') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
+                    <Link to="/dashboard" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/dashboard') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                       <HomeIcon className="h-4 w-4" />
                       My Complaints
                     </Link>
-                    <Link
-                      to="/complaints/new"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/complaints/new') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
+                    <Link to="/complaints/new" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/complaints/new') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                       <PlusCircleIcon className="h-4 w-4" />
                       New Complaint
                     </Link>
                   </>
                 )}
 
-                {/* Officer nav */}
+                {/* Local Officer nav */}
                 {user?.role === 'local_officer' && (
                   <>
-                    <Link
-                      to="/officer"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/officer') && !isActive('/officer/') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
+                    <Link to="/officer" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/officer') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                       <ClipboardDocumentListIcon className="h-4 w-4" />
-                      My Assigned
+                      My Area
                     </Link>
-                    <Link
-                      to="/admin"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/admin') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <ChartBarIcon className="h-4 w-4" />
-                      All Complaints
-                    </Link>
-                    <Link
-                      to="/complaints/new"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/complaints/new') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
+                    <Link to="/complaints/new" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/complaints/new') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                       <PlusCircleIcon className="h-4 w-4" />
                       New Complaint
                     </Link>
                   </>
                 )}
 
-                {/* Super Admin nav */}
-                {user?.role === 'super_admin' && (
+                {/* Zonal Officer nav */}
+                {isZonalOfficer && (
                   <>
-                    <Link
-                      to="/super-admin"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/super-admin') && location.pathname === '/super-admin' ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <UserGroupIcon className="h-4 w-4" />
-                      Users
+                    <Link to="/officer" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/officer') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                      <ShieldCheckIcon className="h-4 w-4" />
+                      My Zone
                     </Link>
-                    <Link
-                      to="/admin"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/admin') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
+                  </>
+                )}
+
+                {/* District Officer nav */}
+                {isDistrictOfficer && (
+                  <>
+                    <Link to="/district-officer" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/district-officer') && location.pathname === '/district-officer' ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                      <UserGroupIcon className="h-4 w-4" />
+                      Management
+                    </Link>
+                    <Link to="/admin" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/admin') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                       <ChartBarIcon className="h-4 w-4" />
                       Dashboard
                     </Link>
-                    <Link
-                      to="/officer"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/officer') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <ShieldCheckIcon className="h-4 w-4" />
-                      My Assigned
-                    </Link>
-                    <Link
-                      to="/complaints/new"
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                        isActive('/complaints/new') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <PlusCircleIcon className="h-4 w-4" />
-                      New Complaint
+                    <Link to="/officer" className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive('/officer') ? 'bg-trust-blue text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                      <MapIcon className="h-4 w-4" />
+                      All Complaints
                     </Link>
                   </>
                 )}
@@ -150,13 +122,7 @@ export default function Layout() {
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <UserCircleIcon className="h-5 w-5" />
                 <span>{user?.name}</span>
-                <span className={`px-2 py-0.5 text-xs rounded-full capitalize ${
-                  user?.role === 'super_admin'
-                    ? 'bg-alert-red/10 text-alert-red'
-                    : user?.role === 'local_officer'
-                    ? 'bg-engagement-blue/10 text-engagement-blue'
-                    : 'bg-slate-100 text-slate-600'
-                }`}>
+                <span className={`px-2 py-0.5 text-xs rounded-full capitalize ${getRoleBadgeColor()}`}>
                   {user?.role?.replace('_', ' ')}
                 </span>
               </div>

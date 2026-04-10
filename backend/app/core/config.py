@@ -31,10 +31,16 @@ class Settings(BaseSettings):
     smtp_password: Optional[str] = None
 
     # Escalation
-    escalation_days: int = 3
+    escalation_days: int = 3  # Legacy single-level (deprecated)
+    escalation_level1_days: int = 2  # Local -> Zonal
+    escalation_level2_days: int = 5  # Zonal -> District Officer (total from assignment)
+
+    # Geocoding
+    nominatim_user_agent: str = "CivicFix/1.0"
+    geocode_cache_ttl: int = 86400  # 24 hours
 
     class Config:
-        env_file = ".env"
+        env_file = "../.env"
         case_sensitive = False
 
 
