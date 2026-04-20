@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createComplaint, uploadImages } from '../services/complaints'
+import { createComplaint, uploadImages, resolveArea } from '../services/complaints'
 import LocationPicker from '../components/LocationPicker'
 import {
   PhotoIcon,
@@ -8,6 +8,7 @@ import {
   MapPinIcon,
   DocumentTextIcon,
   ArrowLeftIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline'
 
 const categories = [
@@ -26,6 +27,9 @@ export default function ComplaintForm() {
   const [error, setError] = useState('')
   const [location, setLocation] = useState(null)
   const [selectedFiles, setSelectedFiles] = useState([])
+  const [resolvedArea, setResolvedArea] = useState(null)
+  const [resolvingLocation, setResolvingLocation] = useState(false)
+  const resolveTimeoutRef = useRef(null)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -33,6 +37,29 @@ export default function ComplaintForm() {
     category: '',
     address: '',
   })
+
+  const handleLocationChange = (newLocation) => {
+    setLocation(newLocation)
+    setResolvedArea(null)
+
+    if (resolveTimeoutRef.current) {
+      clearTimeout(resolveTimeoutRef.current)
+    }
+
+    if (newLocation?.latitude && newLocation?.longitude) {
+      setResolvingLocation(true)
+      resolveTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await resolveArea(newLocation.latitude, newLocation.longitude)
+          setResolvedArea(res.data)
+        } catch (err) {
+          console.error('Failed to resolve area:', err)
+        } finally {
+          setResolvingLocation(false)
+        }
+      }, 500)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -139,7 +166,37 @@ export default function ComplaintForm() {
             />
           </div>
 
-          <LocationPicker value={location} onChange={setLocation} />
+          <LocationPicker value={location} onChange={handleLocationChange} />
+
+          {resolvingLocation && (
+            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-trust-blue"></div>
+              Detecting area...
+            </div>
+          )}
+
+          {!resolvingLocation && resolvedArea?.district && (
+            <div className="mt-2 flex items-start gap-2 p-3 rounded-lg bg-growth-green/5 border border-growth-green/20">
+              <MapIcon className="h-5 w-5 text-growth-green mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {resolvedArea.district && (
+                    <span><span className="text-slate-500">District:</span> <span className="font-medium text-slate-800">{resolvedArea.district}</span></span>
+                  )}
+                  {resolvedArea.zone && (
+                    <span><span className="text-slate-500">Zone:</span> <span className="font-medium text-slate-800">{resolvedArea.zone}</span></span>
+                  )}
+                  {resolvedArea.area_name && (
+                    <span><span className="text-slate-500">Area:</span> <span className="font-medium text-slate-800">{resolvedArea.area_name}</span></span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!resolvingLocation && location && !resolvedArea?.district && (
+            <p className="text-xs text-caution-orange mt-1">Area could not be auto-detected. Complaint will still be submitted.</p>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Address (Optional)</label>

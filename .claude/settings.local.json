@@ -4,7 +4,8 @@
       "Bash(find D:/miniproject -type f -name *.py -o -name *.jsx -o -name *.js -o -name *.json -o -name *.md)",
       "Bash(pip --version)",
       "Bash(npm --version)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "WebFetch(domain:namakkal.nic.in)"
     ]
   }
 }

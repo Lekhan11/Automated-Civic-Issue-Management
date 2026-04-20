@@ -1,11 +1,11 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.database import get_db
-from app.core.deps import require_role
+from app.core.deps import require_role, get_current_active_user
 from app.models.user import UserRole
 from app.schemas.area import AreaResponse, AreaListResponse
 from app.models.area import AreaCreate, AreaUpdate
-from app.services import area_service
+from app.services import area_service, complaint_service
 
 router = APIRouter(prefix="/api/admin/areas", tags=["Areas"])
 
@@ -63,6 +63,17 @@ async def get_districts(
 ):
     districts = await area_service.get_districts(db)
     return {"districts": districts}
+
+
+@router.get("/resolve")
+async def resolve_area(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    current_user=Depends(get_current_active_user),
+    db=Depends(get_db),
+):
+    area_info = await complaint_service.resolve_area_from_coordinates(db, latitude, longitude)
+    return area_info
 
 
 @router.get("/{area_id}", response_model=AreaResponse)

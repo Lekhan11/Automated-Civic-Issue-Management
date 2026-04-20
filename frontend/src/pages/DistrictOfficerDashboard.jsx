@@ -10,6 +10,15 @@ import {
   MapIcon,
 } from '@heroicons/react/24/outline'
 
+const TAMIL_NADU_DISTRICTS = [
+  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+  "Dindigul", "Erode", "Kanchipuram", "Kanyakumari", "Karur", "Krishnagiri",
+  "Madurai", "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", "Pudukkottai",
+  "Ramanathapuram", "Ranipet", "Salem", "Sivagangai", "Tenkasi", "Thanjavur",
+  "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli", "Tiruvallur",
+  "Tiruvannamalai", "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar",
+]
+
 export default function DistrictOfficerDashboard() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('users')
@@ -19,6 +28,9 @@ export default function DistrictOfficerDashboard() {
   const [zones, setZones] = useState([])
   const [districts, setDistricts] = useState([])
   const [selectedDistrict, setSelectedDistrict] = useState('')
+  const [selectedZone, setSelectedZone] = useState('')
+  const [officerZoneFilter, setOfficerZoneFilter] = useState('')
+  const [officerAreas, setOfficerAreas] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateOfficer, setShowCreateOfficer] = useState(false)
   const [showCreateArea, setShowCreateArea] = useState(false)
@@ -26,13 +38,18 @@ export default function DistrictOfficerDashboard() {
     name: '', email: '', password: '', phone: '', role: 'local_officer',
     assigned_area_id: '', assigned_zone: '',
   })
-  const [areaForm, setAreaForm] = useState({ name: '', ward_number: '', zone: '', district: '' })
+  const [areaForm, setAreaForm] = useState({ name: '', ward_number: '', zone: '', district: '', newZone: false, newZoneName: '' })
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
 
   useEffect(() => {
+    setSelectedZone('')
     fetchData()
   }, [activeTab, selectedDistrict])
+
+  useEffect(() => {
+    if (activeTab === 'areas') fetchData()
+  }, [selectedZone])
 
   useEffect(() => {
     if (!districts.length) {
@@ -54,12 +71,23 @@ export default function DistrictOfficerDashboard() {
         setOfficers(officersRes.data)
         setZones(zonesRes.data.zones || [])
       } else if (activeTab === 'areas') {
+        const params = {}
+        if (selectedDistrict) params.district = selectedDistrict
+        if (selectedZone) params.zone = selectedZone
         const [areasRes, districtsRes] = await Promise.all([
-          getAreas(selectedDistrict ? { district: selectedDistrict } : undefined),
+          getAreas(Object.keys(params).length ? params : undefined),
           getDistricts(),
         ])
         setAreas(areasRes.data.areas || [])
         if (!districts.length) setDistricts(districtsRes.data.districts || [])
+
+        if (selectedDistrict) {
+          const zonesRes = await getZones(selectedDistrict)
+          setZones(zonesRes.data.zones || [])
+        } else {
+          setZones([])
+        }
+        setSelectedZone('')
       }
     } catch (err) {
       console.error('Failed to fetch data:', err)
@@ -83,6 +111,8 @@ export default function DistrictOfficerDashboard() {
       await api.post('/api/admin/officers', data)
       setShowCreateOfficer(false)
       setOfficerForm({ name: '', email: '', password: '', phone: '', role: 'local_officer', assigned_area_id: '', assigned_zone: '' })
+      setOfficerZoneFilter('')
+      setOfficerAreas([])
       fetchData()
     } catch (err) {
       setFormError(err.response?.data?.detail || 'Failed to create officer')
@@ -102,9 +132,10 @@ export default function DistrictOfficerDashboard() {
     setFormError('')
     setFormLoading(true)
     try {
-      await createArea({ ...areaForm, ward_number: parseInt(areaForm.ward_number) })
+      const zone = areaForm.newZone ? areaForm.newZoneName : areaForm.zone
+      await createArea({ name: areaForm.name, ward_number: parseInt(areaForm.ward_number), zone, district: areaForm.district })
       setShowCreateArea(false)
-      setAreaForm({ name: '', ward_number: '', zone: '', district: '' })
+      setAreaForm({ name: '', ward_number: '', zone: '', district: '', newZone: false, newZoneName: '' })
       fetchData()
     } catch (err) {
       setFormError(err.response?.data?.detail || 'Failed to create area')
@@ -237,16 +268,30 @@ export default function DistrictOfficerDashboard() {
       {activeTab === 'areas' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
-            >
-              <option value="">All Districts</option>
-              {districts.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
+              >
+                <option value="">All Districts</option>
+                {districts.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              {selectedDistrict && (
+                <select
+                  value={selectedZone}
+                  onChange={(e) => setSelectedZone(e.target.value)}
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
+                >
+                  <option value="">All Zones</option>
+                  {zones.map((z) => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              )}
+            </div>
             <button onClick={() => setShowCreateArea(true)} className="flex items-center gap-2 bg-trust-blue text-white px-4 py-2 rounded-lg hover:bg-engagement-blue">
               <PlusIcon className="h-5 w-5" />
               Add Area
@@ -271,12 +316,14 @@ export default function DistrictOfficerDashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-slate-800">{a.name}</p>
-                        <p className="text-sm text-slate-500">{a.district} — Zone: {a.zone}</p>
+                        <p className="text-sm text-slate-500">{selectedZone ? a.district : `${a.district} — ${a.zone}`}</p>
                       </div>
                     </div>
-                    <span className="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-600">
-                      {a.zone}
-                    </span>
+                    {!selectedZone && (
+                      <span className="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-600">
+                        {a.zone}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -329,19 +376,47 @@ export default function DistrictOfficerDashboard() {
                 <input type="tel" value={officerForm.phone} onChange={(e) => setOfficerForm({ ...officerForm, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" />
               </div>
               {officerForm.role === 'local_officer' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Area</label>
-                  <select
-                    value={officerForm.assigned_area_id}
-                    onChange={(e) => setOfficerForm({ ...officerForm, assigned_area_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
-                  >
-                    <option value="">Select area...</option>
-                    {areas.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name} ({a.district} — {a.zone})</option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Filter by Zone</label>
+                    <select
+                      value={officerZoneFilter}
+                      onChange={async (e) => {
+                        const zone = e.target.value
+                        setOfficerZoneFilter(zone)
+                        setOfficerForm({ ...officerForm, assigned_area_id: '' })
+                        if (zone) {
+                          const res = await getAreas({ zone, district: selectedDistrict || undefined })
+                          setOfficerAreas(res.data.areas || [])
+                        } else {
+                          setOfficerAreas([])
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
+                    >
+                      <option value="">Select zone first...</option>
+                      {zones.map((z) => (
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Area</label>
+                    <select
+                      value={officerForm.assigned_area_id}
+                      onChange={(e) => setOfficerForm({ ...officerForm, assigned_area_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
+                      disabled={!officerZoneFilter}
+                    >
+                      <option value="">
+                        {officerZoneFilter ? 'Select area...' : 'Select a zone above'}
+                      </option>
+                      {officerAreas.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
               {officerForm.role === 'zonal_officer' && (
                 <div>
@@ -394,24 +469,28 @@ export default function DistrictOfficerDashboard() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">District</label>
-                <select value={areaForm.district} onChange={(e) => { setAreaForm({ ...areaForm, district: e.target.value }); if (e.target.value) { fetchZonesForDistrict(e.target.value) } }} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" required>
+                <select value={areaForm.district} onChange={(e) => { setAreaForm({ ...areaForm, district: e.target.value, zone: '', newZone: false, newZoneName: '' }); if (e.target.value) { fetchZonesForDistrict(e.target.value) } }} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" required>
                   <option value="">Select district...</option>
-                  {districts.map((d) => (
+                  {TAMIL_NADU_DISTRICTS.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Zone (Taluk)</label>
-                <select value={areaForm.zone} onChange={(e) => setAreaForm({ ...areaForm, zone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" required>
-                  <option value="">Select zone...</option>
-                  {zones.map((z) => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                  <option value="__new">Add new zone...</option>
-                </select>
-                {areaForm.zone === '__new' && (
-                  <input type="text" placeholder="Enter zone name" onChange={(e) => setAreaForm({ ...areaForm, zone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none mt-2" />
+                {!areaForm.newZone ? (
+                  <select value={areaForm.zone} onChange={(e) => { if (e.target.value === '__new') { setAreaForm({ ...areaForm, newZone: true, zone: '', newZoneName: '' }) } else { setAreaForm({ ...areaForm, zone: e.target.value }) } }} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" required>
+                    <option value="">Select zone...</option>
+                    {zones.map((z) => (
+                      <option key={z} value={z}>{z}</option>
+                    ))}
+                    <option value="__new">Add new zone...</option>
+                  </select>
+                ) : (
+                  <div className="space-y-2">
+                    <input type="text" value={areaForm.newZoneName} onChange={(e) => setAreaForm({ ...areaForm, newZoneName: e.target.value })} placeholder="Enter new zone name" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none" required />
+                    <button type="button" onClick={() => setAreaForm({ ...areaForm, newZone: false, zone: '', newZoneName: '' })} className="text-sm text-trust-blue hover:underline">← Back to select existing zone</button>
+                  </div>
                 )}
               </div>
               <div className="flex gap-3 pt-2">

@@ -1,51 +1,15 @@
 """
-Seed script to populate Tamil Nadu districts and zones (taluks).
+Seed script to populate district -> zone (taluk) -> area (village) hierarchy.
 Run with: python -m app.seed_areas
 
-Each entry represents a taluk/zone within a district.
+Each district has zones (taluks), and each zone has areas (revenue villages).
 Ward numbers are auto-incremented per zone (starting from 1).
 """
 import asyncio
+from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
-
-# Tamil Nadu: 38 districts with their taluks
-TAMIL_NADU_DISTRICTS = {
-    "Ariyalur": ["Ariyalur", "Udayarpalayam", "Andimadam", "Jayankondam"],
-    "Chengalpattu": ["Chengalpattu", "Tambaram", "Pallavaram", "Sholinganallur", "Tiruporur", "Maduranthakam", "Cheyyur"],
-    "Chennai": ["Egmore", "Fort Tondiarpet", "Mambalam", "T. Nagar", "Velachery", "Anna Nagar", "Perambur", "Tiruvottiyur", "Alandur", "Poonamallee", "Sholavaramanallur", "Madhavaram"],
-    "Coimbatore": ["Coimbatore North", "Coimbatore South", "Sulur", "Mettupalayam", "Pollachi", "Valparai", "Karamadai", "Perianaickenpalayam"],
-    "Cuddalore": ["Cuddalore", "Panruti", "Virudhachalam", "Chidambaram", "Kattumannarkoil", "Srimushnam"],
-    "Dharmapuri": ["Dharmapuri", "Harur", "Palacode", "Pennagaram", "Pappireddipatti"],
-    "Dindigul": ["Dindigul", "Vedasandur", "Natham", "Oddanchatram", "Athoor", "Gundupatti"],
-    "Erode": ["Erode", "Gobichettipalayam", "Bhavani", "Perundurai", "Sathyamangalam", "Anthiyur", "Kundadam"],
-    "Kanchipuram": ["Kanchipuram", "Sriperumbudur", "Uthiramerur", "Tiruvallur", "Wallajabad", "Maduranthakam"],
-    "Kanyakumari": ["Nagercoil", "Padmanabhapuram", "Colachel", "Thuckalay", "Vilavancode", "Killiyoor", "Agasteeswaram"],
-    "Karur": ["Karur", "Kulithalai", "Krishnarayapuram", "Aravakurichi", "Thogamalai"],
-    "Krishnagiri": ["Krishnagiri", "Hosur", "Denkanikottai", "Uthagamandalam", "Pochampalli", "Sulagiri", "Bargur"],
-    "Madurai": ["Madurai North", "Madurai South", "Melur", "Vadipatti", "Usilampatti", "Peraiyur", "Tirumangalam", "Kallikudi"],
-    "Nagapattinam": ["Nagapattinam", "Mayiladuthurai", "Sirkazhi", "Kumbakonam", "Vedaranyam", "Tharangambadi"],
-    "Namakkal": ["Namakkal", "Rasipuram", "Tiruchengode", "Paramathi Velur", "Kumarapalayam", "Puduchatram"],
-    "Nilgiris": ["Udhagamandalam", "Coonoor", "Kotagiri", "Kundanad", "Gudalur", "Pandalur"],
-    "Perambalur": ["Perambalur", "Kunnam", "Veppanthattai", "Alathur", "Rainfall", "Pennadam"],
-    "Pudukkottai": ["Pudukkottai", "Aranthangi", "Illuppur", "Karambakudi", "Manamelkudi", "Thirumayam", "Avudayarkovil"],
-    "Ramanathapuram": ["Ramanathapuram", "Rameswaram", "Paramakudi", "Sivaganga", "Tiruvadanai", "Kadaladi"],
-    "Ranipet": ["Arakkonam", "Ranipet", "Walajah", "Nemili", "Cheyyar", "Kalavai", "Timiri"],
-    "Salem": ["Salem", "Attur", "Omalur", "Mettur", "Sankari", "Yercaud", "Gangavalli", "Vazhapadi"],
-    "Sivagangai": ["Sivagangai", "Karaikudi", "Devakottai", "Manamadurai", "Tirupathur", "Ilayankudi"],
-    "Tenkasi": ["Tenkasi", "Shencottai", "Alangulam", "Sankarankovil", "Kadayanallur", "Veerakeralamputhur"],
-    "Thanjavur": ["Thanjavur", "Kumbakonam", "Orathanadu", "Pattukottai", "Peravurani", "Budalur", "Thiruvonam"],
-    "Theni": ["Theni", "Bodinayakanur", "Periyakulam", "Uthamapalayam", "Andipatti", "Cumbum"],
-    "Thoothukudi": ["Thoothukudi", "Tiruchendur", "Srivaikundam", "Ettayapuram", "Sathankulam", "Ottapidaram", "Vilathikulam"],
-    "Tiruchirappalli": ["Tiruchirappalli", "Lalgudi", "Manapparai", "Musiri", "Thottiam", "Thuraiyur", "Manachanallur", "Srirangam"],
-    "Tirunelveli": ["Tirunelveli", "Palayamkottai", "Ambasamudram", "Tenkasi", "Sankarankovil", "Nanguneri", "Radhapuram"],
-    "Tiruvallur": ["Tiruvallur", "Poonamallee", "Avadi", "Thiruverkadu", "Gummidipoondi", "Minjur", "Pattabiram"],
-    "Tiruvannamalai": ["Tiruvannamalai", "Cheyyar", "Polur", "Chengam", "Kalasapakkam", "Arani"],
-    "Tiruvarur": ["Tiruvarur", "Kumbakonam", "Nannilam", "Needamangalam", "Mannargudi", "Kodavasal"],
-    "Vellore": ["Vellore", "Katpadi", "Gudiyatham", "Ambur", "Vaniyambadi", "Tirupattur", "Anaicut", "Kaveripakkam"],
-    "Viluppuram": ["Viluppuram", "Rasipuram", "Tirukkovilur", "Tittakudi", "Ulundurpettai", "Vanur", "Marakkanam"],
-    "Virudhunagar": ["Virudhunagar", "Sivakasi", "Rajapalayam", "Aruppukkottai", "Tiruchuli", "Kariapatti"],
-}
+from app.data import DISTRICTS_DATA
 
 
 async def seed_areas():
@@ -56,47 +20,57 @@ async def seed_areas():
     await db.areas.create_index([("zone", 1)])
     await db.areas.create_index([("district", 1)])
 
-    # Drop old Bangalore areas if any (they won't have district field)
+    # Drop old areas without district field (legacy Bangalore data)
     old_areas = await db.areas.count_documents({"district": {"$exists": False}})
     if old_areas > 0:
         await db.areas.delete_many({"district": {"$exists": False}})
         print(f"Removed {old_areas} old area records without district field")
 
+    now = datetime.utcnow()
     created = 0
-    updated = 0
-    ward_counter = {}
+    skipped = 0
 
-    for district, zones in TAMIL_NADU_DISTRICTS.items():
-        for zone in zones:
-            ward_counter[(district, zone)] = ward_counter.get((district, zone), 0) + 1
-            ward_num = ward_counter[(district, zone)]
+    for district_name, district_data in DISTRICTS_DATA.items():
+        # Remove old records for this district (handles re-seeding)
+        old = await db.areas.count_documents({"district": district_name})
+        if old > 0:
+            await db.areas.delete_many({"district": district_name})
+            print(f"Cleared {old} existing records for {district_name}")
 
-            result = await db.areas.update_one(
-                {"name": zone, "district": district},
-                {"$set": {
-                    "name": zone,
-                    "ward_number": ward_num,
-                    "zone": zone,
-                    "district": district,
+        ward_counter = {}
+
+        for zone_name, villages in district_data["zones"].items():
+            ward_counter[zone_name] = 0
+            for village_name in villages:
+                ward_counter[zone_name] += 1
+                area_doc = {
+                    "name": village_name,
+                    "ward_number": ward_counter[zone_name],
+                    "zone": zone_name,
+                    "district": district_name,
                     "is_active": True,
-                    "updated_at": __import__("datetime").datetime.utcnow(),
-                }, "$setOnInsert": {
-                    "created_at": __import__("datetime").datetime.utcnow(),
-                }},
-                upsert=True,
-            )
-            if result.upserted_id:
-                created += 1
-            else:
-                updated += 1
+                    "created_at": now,
+                    "updated_at": now,
+                }
+                try:
+                    await db.areas.insert_one(area_doc)
+                    created += 1
+                except Exception as e:
+                    if "duplicate key" in str(e):
+                        skipped += 1
+                    else:
+                        raise
+
+        zones = list(district_data["zones"].keys())
+        village_count = sum(len(v) for v in district_data["zones"].values())
+        print(f"{district_name}: {village_count} villages across {len(zones)} zones")
+        print(f"  Zones: {', '.join(zones)}")
 
     total = await db.areas.count_documents({"is_active": True})
-    district_count = await db.areas.distinct("district", {"is_active": True})
+    all_districts = await db.areas.distinct("district", {"is_active": True})
 
-    print(f"Areas seeded: {created} created, {updated} updated")
-    print(f"Total areas: {total}")
-    print(f"Districts: {len(district_count)}")
-    print(f"Districts: {', '.join(sorted(district_count))}")
+    print(f"\nTotal areas: {total}")
+    print(f"Districts: {', '.join(sorted(all_districts))}")
     client.close()
 
 

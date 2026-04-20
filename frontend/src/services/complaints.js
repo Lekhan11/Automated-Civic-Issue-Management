@@ -57,3 +57,6 @@ export const getZones = (district) => {
 }
 
 export const getDistricts = () => api.get('/api/admin/areas/districts')
+
+export const resolveArea = (latitude, longitude) =>
+  api.get(`/api/admin/areas/resolve?latitude=${latitude}&longitude=${longitude}`)

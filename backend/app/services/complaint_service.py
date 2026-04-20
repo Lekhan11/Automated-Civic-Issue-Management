@@ -19,12 +19,13 @@ async def generate_ticket_id(db):
 # ---- Area Resolution ----
 
 async def resolve_area_from_coordinates(db, latitude: float, longitude: float) -> dict:
-    """Reverse geocode coordinates to area. Returns dict with area_id, ward_number, zone, geocoded_area_name."""
+    """Reverse geocode coordinates to area. Returns dict with area_id, area_name, ward_number, zone, district, geocoded_area_name."""
     from geopy.geocoders import Nominatim
     from app.services.area_service import get_area_by_name
 
     geolocator = Nominatim(user_agent=settings.nominatim_user_agent)
     geocoded_area_name = None
+    geocoded_zone = None
 
     try:
         location = await asyncio.to_thread(
@@ -33,20 +34,43 @@ async def resolve_area_from_coordinates(db, latitude: float, longitude: float) -
         if location and location.raw:
             address_data = location.raw.get("address", {})
             geocoded_area_name = (
-                address_data.get("suburb")
+                address_data.get("village")
+                or address_data.get("suburb")
                 or address_data.get("neighbourhood")
                 or address_data.get("city_district")
+                or address_data.get("town")
                 or address_data.get("city")
+            )
+            geocoded_zone = (
+                address_data.get("county")
+                or address_data.get("state_district")
             )
     except Exception:
         geocoded_area_name = None
 
-    result = {"area_id": None, "ward_number": None, "zone": None, "district": None, "geocoded_area_name": geocoded_area_name}
+    result = {"area_id": None, "area_name": None, "ward_number": None, "zone": None, "district": None, "geocoded_area_name": geocoded_area_name}
 
     if geocoded_area_name:
         area = await get_area_by_name(db, geocoded_area_name)
+
+        # Fallback: case-insensitive partial match
+        if not area:
+            area = await db.areas.find_one({
+                "name": {"$regex": geocoded_area_name, "$options": "i"},
+                "is_active": True,
+            })
+
+        # Fallback: match within the geocoded zone context
+        if not area and geocoded_zone:
+            area = await db.areas.find_one({
+                "name": {"$regex": geocoded_area_name, "$options": "i"},
+                "zone": {"$regex": geocoded_zone, "$options": "i"},
+                "is_active": True,
+            })
+
         if area:
             result["area_id"] = str(area["_id"])
+            result["area_name"] = area["name"]
             result["ward_number"] = area["ward_number"]
             result["zone"] = area["zone"]
             result["district"] = area["district"]
@@ -97,6 +121,7 @@ async def create_complaint(db, user_id: str, complaint_data: dict) -> dict:
         "ward_number": area_info.get("ward_number"),
         "zone": area_info.get("zone"),
         "district": area_info.get("district"),
+        "area_name": area_info.get("area_name"),
         "geocoded_area_name": area_info.get("geocoded_area_name"),
         "assigned_at": None,
         "created_at": datetime.utcnow(),
