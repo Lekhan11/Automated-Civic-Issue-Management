@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getComplaint } from '../services/complaints'
+import { getComplaint, updateComplaintStatus } from '../services/complaints'
+import { useAuth } from '../context/AuthContext'
 import StatusBadge from '../components/StatusBadge'
 import {
   ArrowLeftIcon,
@@ -25,11 +26,22 @@ const categoryLabels = {
   other: 'Other',
 }
 
+const statusLabels = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  resolved: 'Resolved',
+  escalated: 'Escalated',
+}
+
 export default function ComplaintDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [complaint, setComplaint] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [resolutionNotes, setResolutionNotes] = useState('')
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     fetchComplaint()
@@ -47,7 +59,37 @@ export default function ComplaintDetail() {
     }
   }
 
-  // Safely extract coordinates with defaults
+  const canUpdateStatus = useMemo(() => {
+    if (!user || !complaint) return false
+    if (complaint.status === 'resolved') return false
+    const role = user.role
+    if (role === 'district_officer') return true
+    if (role === 'zonal_officer') return complaint.zone === user.assigned_zone
+    if (role === 'local_officer') return complaint.area_id === user.assigned_area_id
+    if (role === 'user') return complaint.submitted_by === user.id
+    return false
+  }, [user, complaint])
+
+  const handleStatusUpdate = async () => {
+    if (!selectedStatus) return
+    setUpdating(true)
+    try {
+      const payload = { status: selectedStatus }
+      if (selectedStatus === 'resolved' && resolutionNotes.trim()) {
+        payload.resolution_notes = resolutionNotes.trim()
+      }
+      await updateComplaintStatus(id, payload)
+      setSelectedStatus('')
+      setResolutionNotes('')
+      fetchComplaint()
+    } catch (err) {
+      console.error('Failed to update status:', err)
+      alert('Failed to update complaint status')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const mapPosition = useMemo(() => {
     if (!complaint?.location?.coordinates) return DEFAULT_POS
     const [lon, lat] = complaint.location.coordinates
@@ -150,6 +192,40 @@ export default function ComplaintDetail() {
             </div>
           )}
         </div>
+
+        {/* Status Update (for officers) */}
+        {canUpdateStatus && (
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h2 className="font-semibold text-slate-800 mb-4">Update Status</h2>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none"
+              >
+                <option value="">Select new status...</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <button
+                onClick={handleStatusUpdate}
+                disabled={!selectedStatus || updating}
+                className="px-6 py-2 bg-growth-green text-white text-sm font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+            {selectedStatus === 'resolved' && (
+              <textarea
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                placeholder="Add resolution notes (optional)..."
+                rows={3}
+                className="mt-4 w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-trust-blue focus:border-trust-blue outline-none resize-none"
+              />
+            )}
+          </div>
+        )}
 
         {/* Description */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">

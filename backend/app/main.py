@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.database import connect_to_mongo, close_mongo_connection
+from app.core.database import connect_to_database, close_database
 from app.api import auth, complaints, admin, areas
 
 app = FastAPI(
@@ -9,7 +9,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -18,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(auth.router)
 app.include_router(complaints.router)
 app.include_router(admin.router)
@@ -27,12 +25,12 @@ app.include_router(areas.router)
 
 @app.on_event("startup")
 async def startup_event():
-    await connect_to_mongo()
+    await connect_to_database()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await close_mongo_connection()
+    await close_database()
 
 
 @app.get("/")

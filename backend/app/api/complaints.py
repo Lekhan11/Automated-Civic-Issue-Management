@@ -110,7 +110,6 @@ async def get_assigned_complaints(
         db, str(current_user["_id"]), page, limit
     )
 
-    # Filter by status if provided
     if status:
         result["complaints"] = [c for c in result["complaints"] if c.get("status") == status]
         result["total"] = len(result["complaints"])
@@ -174,6 +173,23 @@ async def update_complaint(
     complaint = await complaint_service.get_complaint_by_id(db, complaint_id)
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # RBAC: Check if user can update this complaint
+    user_role = current_user.get("role")
+    user_id = str(current_user["_id"])
+    can_update = False
+
+    if user_role == "district_officer":
+        can_update = True
+    elif user_role == "zonal_officer":
+        can_update = complaint.get("zone") == current_user.get("assigned_zone")
+    elif user_role == "local_officer":
+        can_update = complaint.get("area_id") == current_user.get("assigned_area_id")
+    elif user_role == "user":
+        can_update = complaint.get("submitted_by") == user_id
+
+    if not can_update:
+        raise HTTPException(status_code=403, detail="Not authorized to update this complaint")
 
     if request.status:
         updated = await complaint_service.update_complaint_status(

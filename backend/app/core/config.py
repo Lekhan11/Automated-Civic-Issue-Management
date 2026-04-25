@@ -3,9 +3,15 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # MongoDB
+    # Database selection
+    use_supabase: bool = False
+
+    # MongoDB (local fallback)
     mongodb_url: str = "mongodb://localhost:27017"
     database_name: str = "complaint_db"
+
+    # Supabase PostgreSQL
+    supabase_db_url: Optional[str] = None
 
     # JWT
     secret_key: str = "your-super-secret-key-change-this-in-production"
@@ -31,13 +37,13 @@ class Settings(BaseSettings):
     smtp_password: Optional[str] = None
 
     # Escalation
-    escalation_days: int = 3  # Legacy single-level (deprecated)
-    escalation_level1_days: int = 2  # Local -> Zonal
-    escalation_level2_days: int = 5  # Zonal -> District Officer (total from assignment)
+    escalation_days: int = 3
+    escalation_level1_days: int = 2
+    escalation_level2_days: int = 5
 
     # Geocoding
     nominatim_user_agent: str = "CivicFix/1.0"
-    geocode_cache_ttl: int = 86400  # 24 hours
+    geocode_cache_ttl: int = 86400
 
     class Config:
         env_file = "../.env"
