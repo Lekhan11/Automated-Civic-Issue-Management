@@ -5,7 +5,10 @@
       "Bash(pip --version)",
       "Bash(npm --version)",
       "Bash(docker compose:*)",
-      "WebFetch(domain:namakkal.nic.in)"
+      "WebFetch(domain:namakkal.nic.in)",
+      "WebFetch(domain:nominatim.openstreetmap.org)",
+      "WebSearch",
+      "WebFetch(domain:overpass-api.de)"
     ]
   }
 }
